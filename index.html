@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Quiz Online</title>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f9f9f9; }
+    .question { margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; }
+    button { margin-top: 10px; padding: 6px 12px; cursor: pointer; }
+    .correct { color: green; font-weight: bold; }
+    .wrong { color: red; font-weight: bold; }
+    .result { margin-top: 30px; font-size: 1.2em; }
+  </style>
+</head>
+<body>
+
+<h1>Quiz Online - Perguntas GCP</h1>
+
+<div id="quizContainer"></div>
+<button onclick="checkAnswer()">Conferir Resposta</button>
+<button onclick="nextQuestion()">Próxima Pergunta</button>
+<button onclick="showFinalResult()">Resultado Final</button>
+
+<p class="result" id="finalResult"></p>
+
+<script>
+let questions = [];
+let currentQuestionIndex = null;
+let answeredQuestions = {};
+let correctCount = 0;
+
+// Carrega o arquivo de perguntas
+fetch('questions.txt')
+  .then(response => response.text())
+  .then(data => {
+    questions = data.split('\n').filter(Boolean).map(q => JSON.parse(q));
+    nextQuestion();
+  });
+
+function showQuestion() {
+  const quizContainer = document.getElementById("quizContainer");
+  quizContainer.innerHTML = "";
+  const q = questions[currentQuestionIndex];
+
+  let optionsHTML = "";
+  q.options.forEach((opt, i) => {
+    optionsHTML += `
+      <input type="checkbox" id="opt${i}" name="answer" value="${String.fromCharCode(65 + i)}">
+      <label for="opt${i}">${opt}</label><br>`;
+  });
+
+  quizContainer.innerHTML = `
+    <div class="question">
+      <p><strong>${q.question}</strong></p>
+      ${optionsHTML}
+      <p id="feedback"></p>
+    </div>
+  `;
+}
+
+function checkAnswer() {
+  const selected = Array.from(document.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+  const correct = questions[currentQuestionIndex].answer;
+  const feedback = document.getElementById("feedback");
+
+  if (selected.length === 0) return alert("Selecione ao menos uma opção!");
+
+  const isCorrect = JSON.stringify(selected.sort()) === JSON.stringify(correct.sort());
+
+  if (isCorrect) {
+    feedback.innerHTML = '<span class="correct">✅ Correto!</span>';
+    correctCount++;
+  } else {
+    feedback.innerHTML = `<span class="wrong">❌ Errado! Resposta(s) correta(s): ${correct.join(', ')}</span>`;
+  }
+
+  answeredQuestions[currentQuestionIndex] = true;
+}
+
+function nextQuestion() {
+  const remaining = questions.map((_, i) => i).filter(i => !answeredQuestions[i]);
+  if (remaining.length === 0) return alert("Todas as perguntas foram respondidas!");
+
+  currentQuestionIndex = remaining[Math.floor(Math.random() * remaining.length)];
+  showQuestion();
+}
+
+function showFinalResult() {
+  const percent = ((correctCount / questions.length) * 100).toFixed(2);
+  const resultText = `
+    Você acertou <strong>${correctCount} de ${questions.length}</strong> perguntas (<strong>${percent}%</strong>).<br>
+    <strong>${percent >= 70 ? '✅ Aprovado' : '❌ Reprovado'}</strong>
+  `;
+  document.getElementById("finalResult").innerHTML = resultText;
+}
+</script>
+
+</body>
+</html>
